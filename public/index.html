@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RGB Studio</title>
+<style>
+  :root {
+    --bg: #0b0c10; --panel: #13151b; --panel2: #1a1d25; --line: #262a35; --text: #e7e9ee; --dim: #8a90a0;
+    --accent: #7c5cff; --ok: #2ecc71; --warn: #f5a623; --err: #ff5c6c; --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(11,12,16,.92); backdrop-filter: blur(8px); z-index: 5; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: conic-gradient(#ff3b3b, #ffb13b, #f5ff3b, #3bff6c, #3bd8ff, #5b3bff, #ff3bd5, #ff3b3b); }
+  h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .dot.err { background: var(--err); }
+  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  button:hover { border-color: #3a4050; } button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 18px; padding: 18px 20px; max-width: 1400px; margin: 0 auto; }
+  main > * { min-width: 0; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 16px; } .devlist { position: static; } header { flex-wrap: wrap; padding: 12px 16px; } .status { margin-left: 0; flex-wrap: wrap; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+  .banner { margin: 14px 20px 0; padding: 10px 14px; border-radius: var(--r); background: #2a2110; border: 1px solid #5a4416; color: #ffd38a; display: none; align-items: center; gap: 12px; }
+  .banner.err { background: #2a1015; border-color: #5a1a24; color: #ffb3bc; }
+  .banner button { margin-left: auto; }
+  /* global bar */
+  .global { grid-column: 1 / -1; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .global .label { font-weight: 600; margin-right: 4px; }
+  select, input[type=range] { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  input[type=color] { width: 38px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); padding: 2px; cursor: pointer; }
+  .sep { width: 1px; height: 26px; background: var(--line); }
+  /* device list */
+  .devlist { padding: 8px; display: flex; flex-direction: column; gap: 4px; align-self: start; position: sticky; top: 74px; }
+  .dev { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 10px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; }
+  .dev:hover { background: var(--panel2); }
+  .dev.sel { background: var(--panel2); border-color: var(--accent); }
+  .dev .name { font-weight: 600; } .dev .meta { color: var(--dim); font-size: 12px; }
+  .strip { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #000; }
+  .strip i { flex: 1; }
+  /* detail */
+  .detail { padding: 18px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .dhead { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .dhead > div:first-child { min-width: 0; flex: 1 1 240px; overflow-wrap: anywhere; }
+  .dhead h2 { margin: 0 0 4px; font-size: 20px; }
+  .dhead .meta { color: var(--dim); font-size: 13px; }
+  .dhead .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; color: var(--dim); margin-right: 6px; }
+  .bigstrip { height: 14px; border-radius: 7px; }
+  .zones { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .zone { padding: 10px 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; }
+  .zone .meta { color: var(--dim); font-size: 12px; }
+  .effects { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .fx { position: relative; padding: 12px; text-align: left; min-height: 64px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; }
+  .fx .n { font-weight: 600; }
+  .fx .caps { font-size: 11px; color: var(--dim); }
+  .fx.active::after { content: "ACTIVE"; position: absolute; top: 8px; right: 8px; font-size: 9px; letter-spacing: 1px; color: var(--ok); font-weight: 700; }
+  .fx.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .fx .sw { height: 4px; border-radius: 2px; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 16px; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r); }
+  .ctl label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
+  .ctl input[type=range] { width: 100%; padding: 0; accent-color: var(--accent); }
+  .colors { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .applyrow { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; }
+  .toast { position: fixed; bottom: 18px; right: 18px; background: var(--panel2); border: 1px solid var(--line); padding: 10px 14px; border-radius: 8px; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; max-width: 420px; }
+  .toast.show { opacity: 1; transform: none; } .toast.err { border-color: var(--err); color: #ffb3bc; }
+  .empty { color: var(--dim); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"></div><h1>RGB Studio</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span><button id="refresh" title="Rescan devices">Refresh</button></div>
+</header>
+<div class="banner" id="agentBanner"><span>A software effect from openrgb-agent is running (PID <b id="agentPid"></b>) and overrides changes. Applying anything here stops it.</span><button id="stopAgent">Stop it now</button></div>
+<div class="banner err" id="errBanner"><span id="errText"></span><button id="retry">Retry</button></div>
+
+<main>
+  <div class="card global">
+    <span class="label">All devices</span>
+    <select id="allMode"></select>
+    <button id="allModeApply" class="primary">Apply effect to all</button>
+    <span class="sep"></span>
+    <input type="color" id="allColor" value="#7c5cff" title="Solid color for every device">
+    <button id="allColorApply">Solid color</button>
+    <button id="allOff">All off</button>
+  </div>
+  <nav class="card devlist" id="devlist"></nav>
+  <section class="card detail" id="detail"><div class="empty">No device selected.</div></section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let state = { devices: [], sel: 0, fxSel: null, draft: null };
+try { state.sel = Number(localStorage.getItem('rgb.sel') || 0); } catch {}
+
+function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast.t); toast.t = setTimeout(() => (t.className = 'toast'), 2600); }
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
+}
+const stripHtml = (cols, cls = 'strip') => {
+  const c = cols.length ? cols : ['#000'];
+  return `<div class="${cls}" style="background:linear-gradient(90deg,${(c.length === 1 ? [c[0], c[0]] : c).join(',')})"></div>`;
+};
+const caps = (m) => [m.modeSpecific && `${m.colorsMax > 1 ? m.colorsMin + '–' + m.colorsMax + ' colors' : '1 color'}`, m.perLed && !m.modeSpecific && 'per-LED', m.random && 'random', m.speed && 'speed', m.brightness && 'brightness', m.direction.length && 'direction'].filter(Boolean).join(' · ') || 'no options';
+
+async function load(keepSel = true) {
+  $('#refresh').disabled = true;
+  try {
+    const j = await api('/api/devices');
+    state.devices = j.devices;
+    $('#dot').className = 'dot ok';
+    $('#statusText').textContent = `OpenRGB ${j.server} · protocol ${j.proto} · ${j.devices.length} device${j.devices.length === 1 ? '' : 's'}`;
+    $('#errBanner').style.display = 'none';
+    $('#agentBanner').style.display = j.agentEffect ? 'flex' : 'none'; $('#agentPid').textContent = j.agentEffect;
+    if (state.sel >= j.devices.length) state.sel = 0;
+    if (!keepSel) { state.fxSel = null; state.draft = null; }
+    render();
+  } catch (e) {
+    $('#dot').className = 'dot err'; $('#statusText').textContent = 'Disconnected';
+    $('#errText').textContent = e.message; $('#errBanner').style.display = 'flex';
+  } finally { $('#refresh').disabled = false; }
+}
+
+function render() {
+  const devs = state.devices;
+  // global effect dropdown: union of mode names with device counts
+  const counts = new Map();
+  for (const d of devs) for (const m of d.modes) counts.set(m.name, (counts.get(m.name) || 0) + 1);
+  const prev = $('#allMode').value;
+  $('#allMode').innerHTML = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([n, c]) => `<option value="${esc(n)}">${esc(n)} (${c}/${devs.length})</option>`).join('');
+  if (prev && counts.has(prev)) $('#allMode').value = prev;
+
+  $('#devlist').innerHTML = devs.length ? `<p class="section-title" style="margin:8px 10px">Devices</p>` + devs.map((d) => `
+    <button class="dev ${d.index === state.sel ? 'sel' : ''}" data-i="${d.index}">
+      <span class="name">${esc(d.name)}</span>
+      <span class="meta">${esc(d.type)} · ${d.zones.length} zone${d.zones.length === 1 ? '' : 's'} · ${d.ledCount} LEDs · ${esc(d.modes[d.activeMode]?.name ?? '—')}</span>
+      ${stripHtml(d.preview)}
+    </button>`).join('') : '<div class="empty">No RGB devices reported by OpenRGB.</div>';
+  renderDetail();
+}
+
+function renderDetail() {
+  const d = state.devices[state.sel];
+  if (!d) { $('#detail').innerHTML = '<div class="empty">No device selected.</div>'; return; }
+  const fxIdx = state.fxSel ?? d.activeMode;
+  const m = d.modes[fxIdx];
+  if (!state.draft || state.draft.key !== `${d.index}:${fxIdx}`) {
+    state.draft = { key: `${d.index}:${fxIdx}`, colors: m?.colors.some((c) => c !== '#000000') ? [...m.colors] : ['#7c5cff'], speed: m?.speedPct ?? 50, brightness: m?.brightnessPct ?? 100, dir: m?.dir ?? 0, random: m?.colorMode === 3 };
+  }
+  const dr = state.draft;
+  const dirs = m ? [...(m.direction.includes('lr') ? [[0, 'Left'], [1, 'Right']] : []), ...(m.direction.includes('ud') ? [[2, 'Up'], [3, 'Down']] : []), ...(m.direction.includes('hv') ? [[4, 'Horizontal'], [5, 'Vertical']] : [])] : [];
+  const colorCount = m?.modeSpecific ? Math.max(m.colorsMin, Math.min(m.colorsMax, dr.colors.length)) : (m?.perLed ? 1 : 0);
+  while (dr.colors.length < colorCount) dr.colors.push(dr.colors[dr.colors.length - 1] || '#ffffff');
+
+  $('#detail').innerHTML = `
+    <div class="dhead">
+      <div>
+        <h2>${esc(d.name)}</h2>
+        <div class="meta"><span class="pill">${esc(d.type)}</span>${d.vendor ? `<span class="pill">${esc(d.vendor)}</span>` : ''}${esc(d.description || '')} ${d.location ? '· ' + esc(d.location) : ''}</div>
+      </div>
+      <div class="actions">
+        <input type="color" id="devColor" value="${d.preview[0] && d.preview[0] !== '#000000' ? d.preview[0] : '#7c5cff'}" title="Solid color">
+        <button id="devSolid">Solid color</button>
+        <button id="devOff">Off</button>
+        <button id="devSave" title="Write the active mode to device flash (if supported)">Save to device</button>
+      </div>
+    </div>
+    <div>${stripHtml(d.preview, 'bigstrip')}</div>
+    <div>
+      <p class="section-title">Components (zones)</p>
+      <div class="zones">${d.zones.map((z) => `<div class="zone"><div class="name">${esc(z.name)}</div><div class="meta">${z.type} · ${z.leds} LED${z.leds === 1 ? '' : 's'}${z.type === 'linear' && z.ledsMax > z.leds ? ` (max ${z.ledsMax})` : ''}</div></div>`).join('') || '<div class="meta">No zones reported.</div>'}</div>
+    </div>
+    <div>
+      <p class="section-title">Effects (${d.modes.length})</p>
+      <div class="effects">${d.modes.map((x) => `
+        <button class="fx ${x.index === d.activeMode ? 'active' : ''} ${x.index === fxIdx ? 'sel' : ''}" data-fx="${x.index}">
+          <span class="n">${esc(x.name)}</span>
+          ${x.colors.length ? stripHtml(x.colors, 'sw') : ''}
+          <span class="caps">${caps(x)}</span>
+        </button>`).join('')}</div>
+    </div>
+    ${m ? `
+    <div class="controls">
+      ${colorCount ? `<div class="ctl"><label>${m.modeSpecific ? 'Colors' : 'Color (all LEDs)'}</label><div class="colors">
+        ${dr.colors.slice(0, colorCount).map((c, i) => `<input type="color" data-ci="${i}" value="${c}">`).join('')}
+        ${m.modeSpecific && colorCount < m.colorsMax ? '<button id="addColor" title="Add color">+</button>' : ''}
+        ${m.modeSpecific && colorCount > Math.max(1, m.colorsMin) ? '<button id="rmColor" title="Remove color">−</button>' : ''}
+        ${m.random ? `<label style="display:inline-flex;gap:6px;align-items:center;margin:0 0 0 8px"><input type="checkbox" id="random" ${dr.random ? 'checked' : ''}> Random</label>` : ''}
+      </div></div>` : (m.random ? `<div class="ctl"><label>Colors</label><label style="display:inline-flex;gap:6px"><input type="checkbox" id="random" ${dr.random ? 'checked' : ''}> Random</label></div>` : '')}
+      ${m.speed ? `<div class="ctl"><label>Speed <span id="spv">${dr.speed}</span>%</label><input type="range" id="speed" min="0" max="100" value="${dr.speed}"></div>` : ''}
+      ${m.brightness ? `<div class="ctl"><label>Brightness <span id="brv">${dr.brightness}</span>%</label><input type="range" id="bright" min="0" max="100" value="${dr.brightness}"></div>` : ''}
+      ${dirs.length ? `<div class="ctl"><label>Direction</label><select id="dir">${dirs.map(([v, n]) => `<option value="${v}" ${v === dr.dir ? 'selected' : ''}>${n}</option>`).join('')}</select></div>` : ''}
+      <div class="applyrow"><button class="primary" id="applyFx">Apply “${esc(m.name)}”</button><button id="applyFxAll" title="Apply this effect with these settings to every device that has it">Apply to all devices with this effect</button></div>
+    </div>` : ''}
+  `;
+}
+
+function fxPayload(d) {
+  const m = d.modes[state.fxSel ?? d.activeMode], dr = state.draft;
+  const p = {};
+  if (m.modeSpecific || m.perLed) p.colors = dr.colors.slice(0, m.modeSpecific ? Math.max(m.colorsMin, Math.min(m.colorsMax, dr.colors.length)) : 1);
+  if (m.random && dr.random) p.random = true;
+  if (m.speed) p.speed = dr.speed;
+  if (m.brightness) p.brightness = dr.brightness;
+  if (m.direction.length) p.direction = dr.dir;
+  return { m, p };
+}
+async function act(fn, ok) {
+  try { const r = await fn(); toast(ok + (r.stoppedAgentEffect ? ' (stopped openrgb-agent effect)' : '') + (r.skipped?.length ? ` · skipped: ${r.skipped.join(', ')}` : '')); await load(); }
+  catch (e) { toast(e.message, true); }
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  const d = state.devices[state.sel];
+  if (t.dataset.i !== undefined) { state.sel = Number(t.dataset.i); state.fxSel = null; state.draft = null; try { localStorage.setItem('rgb.sel', state.sel); } catch {} render(); return; }
+  if (t.dataset.fx !== undefined) { state.fxSel = Number(t.dataset.fx); renderDetail(); return; }
+  switch (t.id) {
+    case 'refresh': case 'retry': return load(false);
+    case 'stopAgent': return act(() => api('/api/stop-agent', {}), 'Software effect stopped');
+    case 'allModeApply': return act(() => api('/api/mode-all', { name: $('#allMode').value }), `Applied ${$('#allMode').value}`);
+    case 'allColorApply': return act(() => api('/api/color', { device: 'all', color: $('#allColor').value }), 'All devices set');
+    case 'allOff': return act(() => api('/api/off', { device: 'all' }), 'All off');
+    case 'devSolid': return act(() => api('/api/color', { device: d.index, color: $('#devColor').value }), `${d.name}: solid color`);
+    case 'devOff': return act(() => api('/api/off', { device: d.index }), `${d.name}: off`);
+    case 'devSave': return act(() => api('/api/save', { device: d.index }), `${d.name}: saved to device`);
+    case 'addColor': state.draft.colors.push(state.draft.colors.at(-1)); return renderDetail();
+    case 'rmColor': state.draft.colors.pop(); return renderDetail();
+    case 'applyFx': { const { m, p } = fxPayload(d); state.fxSel = null; return act(() => api('/api/mode', { device: d.index, mode: m.index, ...p }), `${d.name}: ${m.name}`); }
+    case 'applyFxAll': { const { m, p } = fxPayload(d); return act(() => api('/api/mode-all', { name: m.name, ...p }), `${m.name} on all`); }
+  }
+});
+document.addEventListener('input', (e) => {
+  const t = e.target, dr = state.draft; if (!dr) return;
+  if (t.dataset.ci !== undefined) dr.colors[Number(t.dataset.ci)] = t.value;
+  else if (t.id === 'speed') { dr.speed = Number(t.value); $('#spv').textContent = t.value; }
+  else if (t.id === 'bright') { dr.brightness = Number(t.value); $('#brv').textContent = t.value; }
+  else if (t.id === 'dir') dr.dir = Number(t.value);
+  else if (t.id === 'random') dr.random = t.checked;
+});
+load(false);
+</script>
+</body>
+</html>
